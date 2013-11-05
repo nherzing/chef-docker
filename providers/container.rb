@@ -46,17 +46,21 @@ end
 
 action :run do
   unless running?
-    if new_resource.public_port
-      port = "#{new_resource.public_port}:#{new_resource.port}"
-    elsif new_resource.port
-      port = ":#{new_resource.port}"
+    case new_resource.public_port
+    when Fixnum
+      ports = ["#{new_resource.public_port}:#{new_resource.port}"]
+    when Array
+      ports = new_resource.public_port.zip(new_resource.public_port)
+                                      .map {|ps| "#{ps[0]}:#{ps[1]}"}
+    else
+      ports = [":#{new_resource.port}"] if new_resource.port
     end
     run_args = ""
     run_args += " -d" if new_resource.detach
     run_args += " -e #{new_resource.env}" if new_resource.env
     run_args += " -h #{new_resource.hostname}" if new_resource.hostname
     run_args += " -m #{new_resource.memory}" if new_resource.memory
-    run_args += " -p #{port}" if port
+    run_args += ports.map {|port| " -p #{port}"}.join if ports
     run_args += " -t" if new_resource.tty
     run_args += " -i" if new_resource.stdin
     run_args += " -privileged" if new_resource.privileged
